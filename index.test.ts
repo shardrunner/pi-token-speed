@@ -86,15 +86,19 @@ test("accepts token-limit completions", (t) => {
   assert.equal(h.last(), "33.3 tok/s");
 });
 
-test("skips failed, aborted, pending, and deferred responses", (t) => {
+test("failed, aborted, pending, and deferred responses preserve the last speed", (t) => {
   const h = harness(t);
+  h.emit("turn_start");
+  h.at(1_000);
+  h.emit("message_end", { message: assistant() });
   for (const stopReason of ["error", "aborted", "pending", "deferred"]) {
+    h.at(2_000);
     h.emit("turn_start");
-    h.at(10_000);
-    h.emit("message_end", { message: assistant(100, stopReason) });
-    h.at(20_000);
+    h.at(3_000);
+    h.emit("message_end", { message: assistant(500, stopReason) });
+    assert.equal(h.last(), "100.0 tok/s");
   }
-  assert.equal(h.statuses.length, 0);
+  assert.equal(h.statuses.length, 1);
 });
 
 test("skips missing/invalid usage and nonpositive elapsed time", (t) => {

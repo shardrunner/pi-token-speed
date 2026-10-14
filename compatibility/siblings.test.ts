@@ -25,10 +25,15 @@ for (const tokenFirst of [true, false]) {
     const temporary = mkdtempSync(join(tmpdir(), "pi-token-speed-compat-"));
     const previousAgentDir = process.env.PI_CODING_AGENT_DIR;
     process.env.PI_CODING_AGENT_DIR = temporary;
-    t.after(() => {
-      if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
-      else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
-      rmSync(temporary, { recursive: true, force: true });
+    let shutdown: (() => Promise<unknown>) | undefined;
+    t.after(async () => {
+      try {
+        await shutdown?.();
+      } finally {
+        if (previousAgentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
+        else process.env.PI_CODING_AGENT_DIR = previousAgentDir;
+        rmSync(temporary, { recursive: true, force: true });
+      }
     });
     const paths = tokenFirst
       ? [join(root, "index.ts"), ...siblingPaths]
@@ -113,7 +118,7 @@ for (const tokenFirst of [true, false]) {
     };
     // Always release the cache status timer and Jev/subagent session resources,
     // even if an assertion fails. "reload" avoids session-summary quit output.
-    t.after(() => emit("session_shutdown", { reason: "reload" }));
+    shutdown = () => emit("session_shutdown", { reason: "reload" });
 
     await emit("session_start", { reason: "startup" });
     assert.deepEqual([...statuses.keys()].sort(), ["jev-control", "prompt-cache-status"]);
