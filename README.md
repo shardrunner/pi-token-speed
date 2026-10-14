@@ -9,16 +9,16 @@ existing footer:
 
 ## Usage
 
-Try without installing:
+From a local checkout, try without installing:
 
 ```bash
-pi -e /home/mbr724/Documents/Personal/repos/extensions/pi/token-speed/index.ts
+pi -e ./index.ts
 ```
 
 For persistent installation:
 
 ```bash
-pi install /home/mbr724/Documents/Personal/repos/extensions/pi/token-speed
+pi install git:git@github.com:shardrunner/pi-token-speed
 ```
 
 Then run `/reload` in an existing Pi session.
