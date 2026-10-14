@@ -1,0 +1,23 @@
+{
+  "name": "pi-token-speed",
+  "version": "0.1.0",
+  "description": "Display the last model response's average output tokens per second in Pi's footer.",
+  "type": "module",
+  "keywords": ["pi-package", "pi", "tokens-per-second"],
+  "engines": { "node": ">=22.19.0" },
+  "files": ["index.ts", "README.md"],
+  "pi": { "extensions": ["./index.ts"] },
+  "scripts": {
+    "test": "node --test *.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run typecheck && npm test"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "1.1.0",
+    "@types/node": "^22.19.0",
+    "typescript": "~5.9.3"
+  }
+}
