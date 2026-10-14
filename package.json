@@ -9,7 +9,6 @@
   "pi": { "extensions": ["./index.ts"] },
   "scripts": {
     "test": "node --test *.test.ts",
-    "test:coexistence": "node --test compatibility/*.test.ts",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm test"
   },

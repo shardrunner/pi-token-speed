@@ -1,11 +1,9 @@
 import assert from "node:assert/strict";
-import { test, type TestContext } from "node:test";
+import { test } from "node:test";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import tokenSpeed from "./index.ts";
 
-function harness(t: TestContext, mode = "tui") {
-  let now = 0;
-  t.mock.method(performance, "now", () => now);
+function harness(mode = "tui") {
   const handlers = new Map<string, (event: any, ctx: ExtensionContext) => unknown>();
   const statuses: Array<[string, string | undefined]> = [];
   const ctx = {
@@ -22,156 +20,96 @@ function harness(t: TestContext, mode = "tui") {
   tokenSpeed(api);
   return {
     statuses,
-    at: (milliseconds: number) => { now = milliseconds; },
     emit: (name: string, event: any = {}) => handlers.get(name)?.(event, ctx),
     last: () => statuses.at(-1)?.[1],
   };
 }
 
-function assistant(output = 100, stopReason = "stop", reasoning = 0) {
-  return { role: "assistant", stopReason, usage: { output, reasoning } };
+function assistant(output = 100, durationMs = 1_000, stopReason = "stop", reasoning = 0) {
+  return { role: "assistant", stopReason, durationMs, usage: { output, reasoning } };
 }
 
-test("displays only tok/s, including latency before streaming starts", (t) => {
-  const h = harness(t);
-  h.emit("session_start");
-  h.emit("turn_start");
-  h.at(1_000);
-  h.emit("message_start", { message: assistant() });
-  h.at(2_000);
-  h.emit("message_end", { message: assistant() });
-  assert.deepEqual(h.statuses.at(-1), ["token-speed", "50.0 tok/s"]);
-});
-
-test("ignores user and tool messages without disturbing response timing", (t) => {
-  const h = harness(t);
-  h.emit("turn_start");
-  h.at(500);
-  for (const role of ["user", "toolResult"]) {
-    h.emit("message_end", { message: { role } });
+test("displays only tok/s using the completed assistant's duration", () => {
+  const h = harness();
+  for (const stopReason of ["stop", "toolUse", "length"]) {
+    h.emit("message_end", { message: assistant(100, 3_000, stopReason) });
+    assert.deepEqual(h.statuses.at(-1), ["token-speed", "33.3 tok/s"]);
   }
-  assert.equal(h.statuses.length, 0);
-  h.at(2_000);
-  h.emit("message_end", { message: assistant() });
-  assert.equal(h.last(), "50.0 tok/s");
 });
 
-test("keeps the last result and excludes tool execution and idle time", (t) => {
-  const h = harness(t);
-  h.emit("turn_start");
-  h.at(2_000);
-  h.emit("message_end", { message: assistant(100, "toolUse") });
-  h.at(30_000);
-  h.emit("turn_end");
-  h.emit("turn_start");
-  assert.equal(h.last(), "50.0 tok/s");
-  h.at(31_000);
+test("does not double-count reasoning tokens already included in output", () => {
+  const h = harness();
+  h.emit("message_end", { message: assistant(100, 1_000, "stop", 80) });
+  assert.equal(h.last(), "100.0 tok/s");
+});
+
+test("ignores user and tool messages, including nested usage", () => {
+  const h = harness();
+  h.emit("message_end", { message: assistant() });
+  for (const role of ["user", "toolResult"]) {
+    h.emit("message_end", { message: { ...assistant(50_000), role } });
+  }
+  assert.equal(h.statuses.length, 1);
+  assert.equal(h.last(), "100.0 tok/s");
   h.emit("message_end", { message: assistant(80) });
   assert.equal(h.last(), "80.0 tok/s");
 });
 
-test("does not double-count reasoning tokens already included in output", (t) => {
-  const h = harness(t);
-  h.emit("turn_start");
-  h.at(1_000);
-  h.emit("message_end", { message: assistant(100, "stop", 80) });
+test("missing or invalid durations preserve the last speed", () => {
+  const h = harness();
+  h.emit("message_end", { message: assistant() });
+  for (const durationMs of [undefined, 0, -1, NaN, Infinity]) {
+    h.emit("message_end", { message: { ...assistant(), durationMs } });
+  }
+  assert.equal(h.statuses.length, 1);
   assert.equal(h.last(), "100.0 tok/s");
 });
 
-test("accepts token-limit completions", (t) => {
-  const h = harness(t);
-  h.emit("turn_start");
-  h.at(3_000);
-  h.emit("message_end", { message: assistant(100, "length") });
-  assert.equal(h.last(), "33.3 tok/s");
-});
-
-test("failed, aborted, pending, and deferred responses preserve the last speed", (t) => {
-  const h = harness(t);
-  h.emit("turn_start");
-  h.at(1_000);
+test("missing or invalid output usage preserves the last speed", () => {
+  const h = harness();
   h.emit("message_end", { message: assistant() });
-  for (const stopReason of ["error", "aborted", "pending", "deferred"]) {
-    h.at(2_000);
-    h.emit("turn_start");
-    h.at(3_000);
-    h.emit("message_end", { message: assistant(500, stopReason) });
-    assert.equal(h.last(), "100.0 tok/s");
-  }
-  assert.equal(h.statuses.length, 1);
-});
-
-test("skips missing/invalid usage and nonpositive elapsed time", (t) => {
-  const h = harness(t);
-  for (const output of [0, -1, NaN, Infinity, undefined]) {
-    h.at(0);
-    h.emit("turn_start");
-    h.at(1_000);
+  for (const output of [undefined, 0, -1, NaN, Infinity]) {
     h.emit("message_end", { message: { ...assistant(), usage: { output } } });
   }
-  h.at(0);
-  h.emit("turn_start");
-  h.at(1_000);
-  h.emit("message_end", { message: { role: "assistant", stopReason: "stop" } });
-  for (const elapsed of [0, -1]) {
-    h.at(0);
-    h.emit("turn_start");
-    h.at(elapsed);
-    h.emit("message_end", { message: assistant() });
-  }
-  assert.equal(h.statuses.length, 0);
-});
-
-test("does not reuse timing for duplicate or unpaired completions", (t) => {
-  const h = harness(t);
-  h.at(1_000);
-  h.emit("message_end", { message: assistant() });
-  assert.equal(h.statuses.length, 0);
-  h.emit("turn_start");
-  h.at(2_000);
-  h.emit("message_end", { message: assistant() });
-  h.at(3_000);
-  h.emit("message_end", { message: assistant() });
+  h.emit("message_end", { message: { ...assistant(), usage: undefined } });
   assert.equal(h.statuses.length, 1);
+  assert.equal(h.last(), "100.0 tok/s");
 });
 
-for (const event of ["turn_end", "agent_end"]) {
-  test(`${event} discards unfinished timing but preserves the last speed`, (t) => {
-    const h = harness(t);
-    h.emit("turn_start");
-    h.at(1_000);
-    h.emit("message_end", { message: assistant() });
-    h.emit("turn_start");
-    h.emit(event);
-    h.at(2_000);
-    h.emit("message_end", { message: assistant() });
-    assert.equal(h.statuses.length, 1);
-    assert.equal(h.last(), "100.0 tok/s");
-  });
-}
+test("failed, aborted, pending, and deferred responses preserve the last speed", () => {
+  const h = harness();
+  h.emit("message_end", { message: assistant() });
+  for (const stopReason of ["error", "aborted", "pending", "deferred"]) {
+    h.emit("message_end", { message: assistant(500, 1_000, stopReason) });
+  }
+  assert.equal(h.statuses.length, 1);
+  assert.equal(h.last(), "100.0 tok/s");
+});
+
+test("observes the completed message without modifying it", () => {
+  const h = harness();
+  const message = assistant();
+  const original = structuredClone(message);
+  assert.equal(h.emit("message_end", { message }), undefined);
+  assert.deepEqual(message, original);
+});
 
 for (const event of ["session_start", "session_tree", "session_shutdown"]) {
-  test(`${event} clears status and timing`, (t) => {
-    const h = harness(t);
-    h.emit("turn_start");
-    h.at(1_000);
+  test(`${event} clears the status`, () => {
+    const h = harness();
     h.emit("message_end", { message: assistant() });
-    h.emit("turn_start");
+    assert.equal(h.last(), "100.0 tok/s");
     h.emit(event);
-    assert.equal(h.last(), undefined);
-    h.at(2_000);
-    h.emit("message_end", { message: assistant() });
-    assert.equal(h.last(), undefined);
+    assert.deepEqual(h.statuses.at(-1), ["token-speed", undefined]);
   });
 }
 
 for (const mode of ["rpc", "json", "print"]) {
-  test(`${mode} mode does not use terminal UI`, (t) => {
-    const h = harness(t, mode);
+  test(`${mode} mode does not use terminal UI`, () => {
+    const h = harness(mode);
     h.emit("session_start");
-    h.emit("turn_start");
-    h.at(1_000);
     h.emit("message_end", { message: assistant() });
+    h.emit("session_tree");
     h.emit("session_shutdown");
     assert.equal(h.statuses.length, 0);
   });
