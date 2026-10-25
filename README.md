@@ -1,6 +1,6 @@
 # Pi token speed
 
-> **Disclaimer:** This extension is vibe coded. Use at your own risk.
+> **Disclaimer:** This extension is vibe coded for personal use. Use at your own risk.
 
 Displays only the last successful model response's average output speed in Pi's
 existing footer:
