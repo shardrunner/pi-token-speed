@@ -11,7 +11,8 @@ See how fast your last model response was generated, right in
 
 ## Why
 
-- Speed varies a lot between providers, models and routes, but Pi doesn't show it, so slow setups go unnoticed.
+- Speed varies a lot between providers, models and routes, but Pi doesn't show it.
+- A live tokens-per-second value makes slow models easy to spot and their speed easy to track over time.
 
 ## Features
 
