@@ -20,7 +20,7 @@ pi -e ./index.ts
 For persistent installation:
 
 ```bash
-pi install git:git@github.com:shardrunner/pi-token-speed
+pi install git:github.com/shardrunner/pi-token-speed
 ```
 
 Then run `/reload` in an existing Pi session.
@@ -53,3 +53,7 @@ npm run check
 Tests are self-contained and require no sibling extensions or provider calls.
 Pi provides the extension API; the SDK dependency is used only for development
 types. No runtime dependencies are bundled.
+
+## License
+
+[MIT](LICENSE) © 2026 Michael Brunner.

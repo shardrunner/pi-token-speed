@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "description": "Display the last model response's average output tokens per second in Pi's footer.",
   "type": "module",
+  "license": "MIT",
   "keywords": ["pi-package", "pi", "tokens-per-second"],
   "engines": { "node": ">=22.19.0" },
-  "files": ["index.ts", "README.md"],
+  "files": ["index.ts", "README.md", "LICENSE"],
   "pi": { "extensions": ["./index.ts"] },
   "scripts": {
     "test": "node --test *.test.ts",
@@ -14,6 +15,11 @@
   },
   "peerDependencies": {
     "@earendil-works/pi-coding-agent": "*"
+  },
+  "overrides": {
+    "@earendil-works/pi-coding-agent": {
+      "undici": "8.12.3"
+    }
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "1.1.0",
