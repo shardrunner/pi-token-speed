@@ -1,9 +1,7 @@
 # Pi token speed
 
-> **Disclaimer:** This extension is vibe coded for personal use. Use at your own risk.
-
-Displays only the last successful model response's average output speed in Pi's
-existing footer:
+Check the average output speed of your last successful model response directly
+in [Pi](https://pi.dev)'s existing footer:
 
 ```text
 42.7 tok/s
@@ -42,6 +40,11 @@ Session start/switch, tree navigation, reload, and shutdown clear the status.
 Uses its own `token-speed` status key without replacing the footer or editor,
 changing messages, or adding requests, timers, or session entries. Terminal UI
 only; RPC, JSON, and print modes are unaffected.
+
+## Project status
+
+Developed with AI assistance for personal use. Provided as-is, without support or
+compatibility guarantees. Review the source and documented limitations before use.
 
 ## Development
 
