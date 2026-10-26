@@ -1,59 +1,64 @@
-# Pi token speed
+# pi-token-speed
 
 > **Disclaimer:** This extension is vibe coded for personal use. Use at your own risk.
 
-Check the average output speed of your last successful model response directly
-in [Pi](https://pi.dev)'s existing footer:
+See how fast your last model response was generated, right in
+[Pi](https://pi.dev)'s existing footer:
 
 ```text
 42.7 tok/s
 ```
 
-## Usage
+## Why
 
-From a local checkout, try without installing:
+- Speed varies a lot between providers, models and routes, but Pi doesn't show it, so slow setups go unnoticed.
 
-```bash
-pi -e ./index.ts
-```
+## Features
 
-For persistent installation:
+- Average output speed of the last successful response.
+- Uses its own status entry, so the footer and editor are not replaced.
+- No extra requests, timers or session entries.
 
-```bash
+## Installation
+
+Requires **Pi 1.1.0+** and **Node.js 22.19+**.
+
+```sh
 pi install git:github.com/shardrunner/pi-token-speed
 ```
 
-Then run `/reload` in an existing Pi session.
+Run `/reload` in open Pi sessions. Update with `pi update --extensions`.
+For local development, try a checkout once with `pi -e ./index.ts`.
+No runtime dependencies, no build step.
 
-## Measurement
+## Usage
 
-Calculates `usage.output / (durationMs / 1000)` from the completed assistant
-message. Reported output already includes reasoning tokens when available.
+Nothing to configure. The speed appears after the first successful response with valid
+output-token and duration data, and updates after each further one.
 
-Uses Pi's response duration, not a locally timed turn. Tool execution and idle
-time are excluded; preparation, authentication, or routing before the response
-stream may also be excluded. This is a response average, not pure decoding speed.
+## Behavior and limitations
 
-Updates after successful responses, including tool-call and token-limit
-responses. Failed responses and missing/invalid usage or duration leave the
-previous value unchanged. Nothing appears before the first valid measurement.
-Session start/switch, tree navigation, reload, and shutdown clear the status.
-
-Uses its own `token-speed` status key without replacing the footer or editor,
-changing messages, or adding requests, timers, or session entries. Terminal UI
-only; RPC, JSON, and print modes are unaffected.
+- **Formula:** `usage.output / (durationMs / 1000)`, based on the completed assistant
+  message. Reasoning tokens are included in the output count when the provider reports
+  them.
+- **Timing:** uses Pi's response duration, not a local timer. Tool execution and idle
+  time are excluded, and so may be preparation, authentication or routing before the
+  response starts. It is an average for the whole response, not pure decoding speed.
+- **Updates:** successful responses count, including tool-call and token-limit
+  responses. Failed responses and missing or invalid output or duration data keep
+  the previous value. Session start or switch, `/tree` navigation, reload and shutdown clear it.
+- **Modes:** TUI only. RPC, JSON and print modes are unaffected.
 
 ## Development
 
-```bash
+```sh
 npm ci --ignore-scripts
 npm run check
 ```
 
-Tests are self-contained and require no sibling extensions or provider calls.
-Pi provides the extension API; the SDK dependency is used only for development
-types. No runtime dependencies are bundled.
+Requires Node.js 22.19+. Tests are self-contained and need no other extensions or
+provider calls. The SDK is a development-only dependency used for types.
 
 ## License
 
-[MIT](LICENSE) © 2026 Michael Brunner.
+[MIT](LICENSE) © 2026 Michael Brunner
